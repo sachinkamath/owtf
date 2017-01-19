@@ -43,21 +43,21 @@ class Config(BaseComponent, ConfigInterface):
 
     def __init__(self, root_dir, owtf_pid):
         self.register_in_service_locator()
-        self.RootDir = root_dir
-        self.OwtfPid = owtf_pid
+        self.root_dir = root_dir
+        self.owtf_pid = owtf_pid
         self.resource = None
         self.error_handler = None
         self.target = None
-        self.Config = None
+        self.config = None
         self.db_plugin = None
         self.worklist_manager = None
         self.initialize_attributes()
         # key can consist alphabets, numbers, hyphen & underscore.
-        self.SearchRegex = re.compile('%s([a-zA-Z0-9-_]*?)%s' % (REPLACEMENT_DELIMITER, REPLACEMENT_DELIMITER))
+        self.search_regex = re.compile('%s([a-zA-Z0-9-_]*?)%s' % (REPLACEMENT_DELIMITER, REPLACEMENT_DELIMITER))
         # Available profiles = g -> General configuration, n -> Network plugin
         # order, w -> Web plugin order, r -> Resources file
         self.initialize_attributes()
-        self.LoadFrameworkConfigFromFile(os.path.join(self.RootDir, 'framework', 'config', 'framework_config.cfg'))
+        self.load_framework_config_from_file(os.path.join(self.RootDir, 'framework', 'config', 'framework_config.cfg'))
 
     def init(self):
         """Initialize the Option resources."""
@@ -68,32 +68,32 @@ class Config(BaseComponent, ConfigInterface):
         self.worklist_manager = self.get_component("worklist_manager")
 
     def initialize_attributes(self):
-        self.Config = defaultdict(list)  # General configuration information.
+        self.config = defaultdict(list)  # General configuration information.
         for type in CONFIG_TYPES:
-            self.Config[type] = {}
+            self.config[type] = {}
 
-    def LoadFrameworkConfigFromFile(self, config_path):
+    def load_framework_config_from_file(self, config_path):
         """Load the configuration from into a global dictionary."""
         if 'framework_config' not in config_path:
             cprint("Loading Config from: %s.." % config_path)
         config_file = FileOperations.open(config_path, 'r')
-        self.Set('FRAMEWORK_DIR', self.RootDir)  # Needed Later.
+        self.set('FRAMEWORK_DIR', self.RootDir)  # Needed Later.
         for line in config_file:
             try:
                 key = line.split(':')[0]
                 if key[0] == '#':  # Ignore comment lines.
                     continue
                 value = line.replace("%s: " % key, "").strip()
-                self.Set(key,
-                         self.MultipleReplace(value, {'FRAMEWORK_DIR': self.RootDir, 'OWTF_PID': str(self.OwtfPid)}))
+                self.set(key,
+                         self.multiple_replace(value, {'FRAMEWORK_DIR': self.root_dir, 'OWTF_PID': str(self.owtf_pid)}))
             except ValueError:
                 self.error_handler.FrameworkAbort("Problem in config file: %s -> Cannot parse line: %s" % (config_path,
                                                                                                            line))
 
-    def ConvertStrToBool(self, string):
+    def convert_str_to_bool(self, string):
         return (not(string in ['False', 'false', 0, '0']))
 
-    def ProcessOptionsPhase1(self, options):
+    def process_options_phase1(self, options):
         """Process the options from the CLI.
 
         :param dict options: Options coming from the CLI.
@@ -101,10 +101,10 @@ class Config(BaseComponent, ConfigInterface):
         """
         # Backup the raw CLI options in case they are needed later.
         self.cli_options = deepcopy(options)
-        self.LoadProfiles(options['Profiles'])
+        self.load_profiles(options['Profiles'])
 
-    def ProcessOptionsPhase2(self, options):
-        target_urls = self.LoadTargets(options)
+    def process_options_phase2(self, options):
+        target_urls = self.load_targets(options)
         self.load_works(target_urls, options)
 
     def load_works(self, target_urls, options):
@@ -131,7 +131,7 @@ class Config(BaseComponent, ConfigInterface):
         :param dict options: the options from the CLI.
 
         """
-        target = self.target.GetTargetConfigs({'target_url': target_url})
+        target = self.target.get_target_config({'target_url': target_url})
         group = options['PluginGroup']
         if options['OnlyPlugins'] is None:
             # If the plugin group option is the default one (not specified by the user).
@@ -152,24 +152,26 @@ class Config(BaseComponent, ConfigInterface):
     def get_profile_path(self, profile_name):
         return self.Profiles.get(profile_name, None)
 
-    def LoadProfiles(self, profiles):
+    def load_profiles(self, profiles):
         # This prevents python from blowing up when the Key does not exist :)
-        self.Profiles = defaultdict(list)
+        self.profiles = defaultdict(list)
         # Now override with User-provided profiles, if present.
-        self.Profiles["GENERAL_PROFILE"] = profiles.get('g', None) or self.FrameworkConfigGet("DEFAULT_GENERAL_PROFILE")
+        self.profiles["GENERAL_PROFILE"] = profiles.get('g', None) or \
+            self.framework_config_get("DEFAULT_GENERAL_PROFILE")
         # Resources profile
-        self.Profiles["RESOURCES_PROFILE"] = profiles.get('r', None) or \
-            self.FrameworkConfigGet("DEFAULT_RESOURCES_PROFILE")
+        self.profiles["RESOURCES_PROFILE"] = profiles.get('r', None) or \
+            self.framework_config_get("DEFAULT_RESOURCES_PROFILE")
         # web plugin order
-        self.Profiles["WEB_PLUGIN_ORDER_PROFILE"] = profiles.get('w', None) or \
-            self.FrameworkConfigGet("DEFAULT_WEB_PLUGIN_ORDER_PROFILE")
+        self.profiles["WEB_PLUGIN_ORDER_PROFILE"] = profiles.get('w', None) or \
+            self.framework_config_get("DEFAULT_WEB_PLUGIN_ORDER_PROFILE")
         # network plugin order
-        self.Profiles["NET_PLUGIN_ORDER_PROFILE"] = profiles.get('n', None) or \
-            self.FrameworkConfigGet("DEFAULT_NET_PLUGIN_ORDER_PROFILE")
+        self.profiles["NET_PLUGIN_ORDER_PROFILE"] = profiles.get('n', None) or \
+            self.framework_config_get("DEFAULT_NET_PLUGIN_ORDER_PROFILE")
         # mapping
-        self.Profiles["MAPPING_PROFILE"] = profiles.get('m', None) or self.FrameworkConfigGet("DEFAULT_MAPPING_PROFILE")
+        self.profiles["MAPPING_PROFILE"] = profiles.get('m', None) or \
+            self.framework_config_get("DEFAULT_MAPPING_PROFILE")
 
-    def LoadTargets(self, options):
+    def load_targets(self, options):
         scope = options['Scope']
         if options['PluginGroup'] == 'auxiliary':
             scope = self.get_aux_target(options)
@@ -192,63 +194,56 @@ class Config(BaseComponent, ConfigInterface):
         # targets can be given by different params depending on the aux plugin we are running
         # so "target_params" is a list of possible parameters by which user can give target
         target_params = ['RHOST', 'TARGET', 'SMB_HOST', 'BASE_URL', 'SMTP_HOST']
-        PluginParams = self.get_component("plugin_params")
+        plugin_params = self.get_component("plugin_params")
         targets = None
-        if PluginParams.ProcessArgs():
+        if plugin_params.process_args():
             for param in target_params:
-                if param in PluginParams.Args:
-                    targets = PluginParams.Args[param]
+                if param in plugin_params.Args:
+                    targets = plugin_params.Args[param]
                     break  # it will capture only the first one matched
             repeat_delim = ','
             if targets is None:
                 logging.error("Aux target not found! See your plugin accepted parameters in ./plugins/ folder")
                 return []
-            if 'REPEAT_DELIM' in PluginParams.Args:
-                repeat_delim = PluginParams.Args['REPEAT_DELIM']
+            if 'REPEAT_DELIM' in plugin_params.args:
+                repeat_delim = plugin_params.args['REPEAT_DELIM']
             return targets.split(repeat_delim)
         else:
             return []
 
-    def MultipleReplace(self, text, replace_dict):
+    def multiple_replace(self, text, replace_dict):
         new_text = text
-        for key in self.SearchRegex.findall(new_text):
+        for key in self.search_regex.findall(new_text):
             # Check if key exists in the replace dict ;)
             if replace_dict.get(key, None):
                 # A recursive call to remove all level occurences of place
                 # holders.
                 new_text = new_text.replace(REPLACEMENT_DELIMITER + key + REPLACEMENT_DELIMITER,
-                                            self.MultipleReplace(replace_dict[key], replace_dict))
+                                            self.multiple_replace(replace_dict[key], replace_dict))
         return new_text
 
-    def LoadProxyConfigurations(self, options):
+    def load_proxy_config(self, options):
         if options['InboundProxy']:
             if len(options['InboundProxy']) == 1:
-                options['InboundProxy'] = [self.Get('INBOUND_PROXY_IP'), options['InboundProxy'][0]]
+                options['InboundProxy'] = [self.get('INBOUND_PROXY_IP'), options['InboundProxy'][0]]
         else:
-            options['InboundProxy'] = [self.Get('INBOUND_PROXY_IP'), self.Get('INBOUND_PROXY_PORT')]
-        self.Set('INBOUND_PROXY_IP', options['InboundProxy'][0])
-        self.Set('INBOUND_PROXY_PORT', options['InboundProxy'][1])
-        self.Set('INBOUND_PROXY', ':'.join(options['InboundProxy']))
-        self.Set('PROXY', ':'.join(options['InboundProxy']))
+            options['InboundProxy'] = [self.get('INBOUND_PROXY_IP'), self.get('INBOUND_PROXY_PORT')]
+        self.set('INBOUND_PROXY_IP', options['InboundProxy'][0])
+        self.set('INBOUND_PROXY_PORT', options['InboundProxy'][1])
+        self.set('INBOUND_PROXY', ':'.join(options['InboundProxy']))
+        self.set('PROXY', ':'.join(options['InboundProxy']))
 
-    def DeepCopy(self, config):
-        """Perform a "deep" copy of the config Obj passed."""
-        copy = defaultdict(list)
-        for key, value in config.items():
-            copy[key] = value.copy()
-        return copy
-
-    def GetResources(self, resource_type):
+    def get_resources(self, resource_type):
         """Replace the resources placeholders with the relevant config."""
         return self.resource.GetResources(resource_type)
 
-    def GetResourceList(self, resource_type_list):
+    def get_resource_list(self, resource_type_list):
         return self.resource.GetResourceList(resource_type_list)
 
-    def GetRawResources(self, resource_type):
-        return self.Resources[resource_type]
+    def get_raw_resource(self, resource_type):
+        return self.resources[resource_type]
 
-    def DeriveConfigFromURL(self, target_URL):
+    def derive_config_from_url(self, target_URL):
         """Automatically find target information based on target name.
 
         If target does not start with 'http' or 'https', then it is considered as a network target.
@@ -296,8 +291,8 @@ class Config(BaseComponent, ConfigInterface):
         # Set the top URL.
         target_config['host_name'] = host
 
-        host_IP = self.GetIPFromHostname(host)
-        host_IPs = self.GetIPsFromHostname(host)
+        host_IP = self.get_ip_from_hostname(host)
+        host_IPs = self.get_ips_from_hostname(host)
         target_config['host_ip'] = host_IP
         target_config['alternative_ips'] = host_IPs
 
@@ -316,54 +311,41 @@ class Config(BaseComponent, ConfigInterface):
             target_config['top_url'] = ''
         return target_config
 
-    def DeriveOutputSettingsFromURL(self, target_URL):
+    def derive_output_config_from_url(self, target_URL):
         # Set the output directory.
-        self.Set('host_output', "%s/%s" % (self.Get('OUTPUT_PATH'), self.Get('host_ip')))
+        self.set('host_output', "%s/%s" % (self.get('OUTPUT_PATH'), self.get('host_ip')))
         # Set the output directory.
-        self.Set('port_output', "%s/%s" % (self.Get('host_output'), self.Get('port_number')))
+        self.set('port_output', "%s/%s" % (self.get('host_output'), self.get('port_number')))
         URL_info_ID = target_URL.replace('/', '_').replace(':', '')
         # Set the URL output directory (plugins will save their data here).
-        self.Set('url_output', "%s/%s/" % (self.Get('port_output'), URL_info_ID))
+        self.set('url_output', "%s/%s/" % (self.get('port_output'), URL_info_ID))
         # Set the partial results path.
-        self.Set('partial_url_output_path', '%spartial' % self.Get('url_output'))
-        self.Set('PARTIAL_REPORT_REGISTER', "%s/partial_report_register.txt" % self.Get('partial_url_output_path'))
+        self.set('partial_url_output_path', '%spartial' % self.get('url_output'))
+        self.set('PARTIAL_REPORT_REGISTER', "%s/partial_report_register.txt" % self.get('partial_url_output_path'))
 
         # Tested in FF 8: Different directory = Different localStorage!! -> All
         # localStorage-dependent reports must be on the same directory.
         # IMPORTANT: For localStorage to work Url reports must be on the same
         # directory.
-        self.Set('HTML_DETAILED_REPORT_PATH', "%s/%s.html" % (self.Get('OUTPUT_PATH'), URL_info_ID))
+        self.set('HTML_DETAILED_REPORT_PATH', "%s/%s.html" % (self.get('OUTPUT_PATH'), URL_info_ID))
         # IMPORTANT: For localStorage to work Url reports must be on the same
         # directory.
-        self.Set('URL_REPORT_LINK_PATH', "%s/index.html" % self.Get('OUTPUT_PATH'))
+        self.set('URL_REPORT_LINK_PATH', "%s/index.html" % self.get('OUTPUT_PATH'))
 
-        if not self.Get('SIMULATION'):
+        if not self.get('SIMULATION'):
             FileOperations.create_missing_dirs(self.Get('host_output'))
 
-        # URL Analysis DBs
-        # URL DBs: Distintion between vetted, confirmed-to-exist, in
-        # transaction DB URLs and potential URLs.
-        self.InitHTTPDBs(self.Get('url_output'))
-
-    def DeriveDBPathsFromURL(self, target_URL):
-        targets_folder = os.path.expanduser(self.Get('TARGETS_DB_FOLDER'))
-        url_info_id = target_URL.replace('/', '_').replace(':', '')
-        transaction_db_path = os.path.join(targets_folder, url_info_id, "transactions.db")
-        url_db_path = os.path.join(targets_folder, url_info_id, "urls.db")
-        plugins_db_path = os.path.join(targets_folder, url_info_id, "plugins.db")
-        return [transaction_db_path, url_db_path, plugins_db_path]
-
-    def GetFileName(self, setting, partial=False):
-        path = self.Get(setting)
+    def get_file_name(self, setting, partial=False):
+        path = self.get(setting)
         if partial:
             return os.path.basename(path)
         return path
 
-    def GetHTMLTransaclog(self, partial=False):
-        return self.GetFileName('TRANSACTION_LOG_HTML', partial)
+    def get_html_transaction_log(self, partial=False):
+        return self.get_file_name('TRANSACTION_LOG_HTML', partial)
 
-    def GetTXTTransaclog(self, partial=False):
-        return self.GetFileName('TRANSACTION_LOG_TXT', partial)
+    def get_txt_transaction_log(self, partial=False):
+        return self.get_file_name('TRANSACTION_LOG_TXT', partial)
 
     def hostname_is_ip(self, hostname, ip):
         """Test if the hostname is an IP.
@@ -377,12 +359,12 @@ class Config(BaseComponent, ConfigInterface):
         """
         return hostname == ip
 
-    def GetIPFromHostname(self, hostname):
+    def get_ip_from_hostname(self, hostname):
         ip = ''
         # IP validation based on @marcwickenden's pull request, thanks!
-        for sck in [socket.AF_INET, socket.AF_INET6]:
+        for socket in [socket.AF_INET, socket.AF_INET6]:
             try:
-                socket.inet_pton(sck, hostname)
+                socket.inet_pton(socket, hostname)
                 ip = hostname
                 break
             except socket.error:
@@ -399,18 +381,18 @@ class Config(BaseComponent, ConfigInterface):
             ip = ipchunks[0]
             cprint("%s has several IP addresses: (%s).Choosing first: %s" % (hostname, "".join(ipchunks)[0:-3], ip))
             alternative_IPs = ipchunks[1:]
-        self.Set('alternative_ips', alternative_IPs)
+        self.set('alternative_ips', alternative_IPs)
         ip = ip.strip()
-        self.Set('INTERNAL_IP', is_internal_ip(ip))
+        self.set('INTERNAL_IP', is_internal_ip(ip))
         logging.info("The IP address for %s is: '%s'" % (hostname, ip))
         return ip
 
-    def GetIPsFromHostname(self, hostname):
+    def get_ips_from_hostname(self, hostname):
         ip = ''
         # IP validation based on @marcwickenden's pull request, thanks!
-        for sck in [socket.AF_INET, socket.AF_INET6]:
+        for socket in [socket.AF_INET, socket.AF_INET6]:
             try:
-                socket.inet_pton(sck, hostname)
+                socket.inet_pton(socket, hostname)
                 ip = hostname
                 break
             except socket.error:
@@ -424,9 +406,9 @@ class Config(BaseComponent, ConfigInterface):
         ipchunks = ip.strip().split("\n")
         return ipchunks
 
-    def IsSet(self, key):
-        key = self.PadKey(key)
-        config = self.GetConfig()
+    def is_set(self, key):
+        key = self.padkey(key)
+        config = self.get_config()
         for type in CONFIG_TYPES:
             if key in config[type]:
                 return True
@@ -439,62 +421,56 @@ class Config(BaseComponent, ConfigInterface):
             if key in config[type]:
                 return config[type][key]
 
-    def PadKey(self, key):
+    def padkey(self, key):
         # Add delimiters.
         return REPLACEMENT_DELIMITER + key + REPLACEMENT_DELIMITER
 
-    def StripKey(self, key):
+    def strip_key(self, key):
         return key.replace(REPLACEMENT_DELIMITER, '')
 
-    def FrameworkConfigGet(self, key):
+    def framework_config_get(self, key):
         """Transparently gets config info from Target or General."""
         try:
-            key = self.PadKey(key)
-            return self.GetKeyValue(key)
+            key = self.padkey(key)
+            return self.get_key_val(key)
         except KeyError:
             message = "The configuration item: %s does not exist!" % key
             self.error_handler.Add(message)
             # Raise plugin-level exception to move on to next plugin.
             raise PluginAbortException(message)
 
-    def FrameworkConfigGetDBPath(self, key):
-        # Only for main/common dbs, for target specific dbs, there are other
-        # methods.
-        relative_path = self.FrameworkConfigGet(key)
-        return os.path.join(self.FrameworkConfigGet("OUTPUT_PATH"), self.FrameworkConfigGet("DB_DIR"), relative_path)
-
-    def FrameworkConfigGetLogsDir(self):
+    def get_logs_dir(self):
         """
         Get log directory by checking if abs or relative path is provided in
         config file
         """
-        logs_dir = self.FrameworkConfigGet("LOGS_DIR")
+        logs_dir = self.framework_config_get("LOGS_DIR")
         # Check access for logsdir parent directory because logsdir may not be created.
         if os.path.isabs(logs_dir) and directory_access(os.path.dirname(logs_dir), "w+"):
             return logs_dir
         else:
-            return os.path.join(self.GetOutputDir(), logs_dir)
+            return os.path.join(self.get_output_dir(), logs_dir)
 
-    def FrameworkConfigGetLogPath(self, process_name):
+    def get_log_path(self, process_name):
         """
         Get the log file path based on the process name
         """
         log_file_name = "%s.log" % process_name
-        return os.path.join(self.FrameworkConfigGetLogsDir(), log_file_name)
+        return os.path.join(self.get_logs_dir(), log_file_name)
 
-    def GetAsList(self, key_list):
+    def get_as_list(self, key_list):
         value_list = []
         for key in key_list:
-            value_list.append(self.FrameworkConfigGet(key))
+            value_list.append(self.framework_config_get(key))
         return value_list
 
-    def GetHeaderList(self, key):
-        return self.FrameworkConfigGet(key).split(',')
+    def get_header_list(self, key):
+        return self.framework_config_get(key).split(',')
 
-    def SetGeneral(self, type, key, value):
-        self.Config[type][key] = value
+    def set_general(self, type, key, value):
+        self.config[type][key] = value
 
-    def Set(self, key, value):
+    def set(self, key, value):
         """Set config items in Target-specific or General config."""
         # Store config in "replacement mode", that way we can multiple-replace
         # the config on resources, etc.
@@ -503,56 +479,47 @@ class Config(BaseComponent, ConfigInterface):
         # Only when value is a string, store in replacements config.
         if isinstance(value, str):
             type = 'string'
-        return self.SetGeneral(type, key, value)
+        return self.set_general(type, key, value)
 
-    def GetFrameworkConfigDict(self):
-        return self.GetConfig()['string']
+    def get_framework_config_dict(self):
+        return self.get_config()['string']
 
-    def GetReplacementDict(self):
-        return {"FRAMEWORK_DIR": self.RootDir}
+    def get_replacement_dict(self):
+        return {"FRAMEWORK_DIR": self.root_dir}
 
     def __getitem__(self, key):
-        return self.Get(key)
+        return self.get(key)
 
     def __setitem__(self, key, value):
-        return self.Set(key, value)
+        return self.set(key, value)
 
-    def GetConfig(self):
-        return self.Config
+    def get_config(self):
+        return self.config
 
-    def Show(self):
+    def show(self):
         cprint("Configuration settings")
-        for k, v in self.GetConfig().items():
+        for k, v in self.get_config().items():
             cprint("%s => %s" % (str(k), str(v)))
 
-    def GetOutputDir(self):
-        output_dir = os.path.expanduser(self.FrameworkConfigGet("OUTPUT_PATH"))
+    def get_output_dir(self):
+        output_dir = os.path.expanduser(self.framework_config_get("OUTPUT_PATH"))
         if not os.path.isabs(output_dir) and directory_access(os.getcwd(), "w+"):
             return output_dir
         else:
             # The output_dir may not be created yet, so check its parent.
             if directory_access(os.path.dirname(output_dir), "w+"):
                 return output_dir
-        return os.path.expanduser(os.path.join(self.FrameworkConfigGet("SETTINGS_DIR"), output_dir))
+        return os.path.expanduser(os.path.join(self.framework_config_get("SETTINGS_DIR"), output_dir))
 
-    def GetOutputDirForTargets(self):
-        return os.path.join(self.GetOutputDir(), self.FrameworkConfigGet("TARGETS_DIR"))
+    def get_output_dir_targets(self):
+        return os.path.join(self.get_output_dir(), self.framework_config_get("TARGETS_DIR"))
 
-    def CleanUpForTarget(self, target_URL):
-        return FileOperations.rm_tree(self.GetOutputDirForTarget(target_URL))
+    def clean_up_target_dir(self, target_URL):
+        return FileOperations.rm_tree(self.get_output_dir_targets(target_URL))
 
-    def GetOutputDirForTarget(self, target_URL):
+    def get_output_dir_target(self, target_URL):
         clean_target_URL = target_URL.replace("/", "_").replace(":", "").replace("#", "")
-        return os.path.join(self.GetOutputDirForTargets(), clean_target_URL)
+        return os.path.join(self.get_output_dir_targets(), clean_target_URL)
 
-    def CreateOutputDirForTarget(self, target_URL):
-        FileOperations.create_missing_dirs(self.GetOutputDirForTarget(target_URL))
-
-    def GetTransactionDBPathForTarget(self, target_URL):
-        return os.path.join(self.GetOutputDirForTarget(target_URL), self.FrameworkConfigGet("TRANSACTION_DB_NAME"))
-
-    def GetUrlDBPathForTarget(self, target_URL):
-        return os.path.join(self.GetOutputDirForTarget(target_URL), self.FrameworkConfigGet("URL_DB_NAME"))
-
-    def GetOutputDBPathForTarget(self, target_URL):
-        return os.path.join(self.GetOutputDirForTarget(target_URL), self.FrameworkConfigGet("OUTPUT_DB_NAME"))
+    def create_output_dir_for_target(self, target_URL):
+        FileOperations.create_missing_dirs(self.get_output_dir_target(target_URL))

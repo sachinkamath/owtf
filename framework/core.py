@@ -209,7 +209,7 @@ class Core(BaseComponent):
         if options['list_plugins']:
             self.PluginHandler.show_plugin_list(options['list_plugins'])
             self.finish()
-        self.config.ProcessOptionsPhase2(options)
+        self.config.process_options_phase2(options)
         command = self.get_command(options['argv'])
 
         self.start_botnet_mode(options)
