@@ -65,8 +65,8 @@ class Core(BaseComponent):
         needs to be placed inside here. No hardcoding of paths please
         """
         # Logs folder creation
-        if not os.path.exists(self.config.FrameworkConfigGetLogsDir()):
-            FileOperations.create_missing_dirs(self.config.FrameworkConfigGetLogsDir())
+        if not os.path.exists(self.config.get_logs_dir()):
+            FileOperations.create_missing_dirs(self.config.get_logs_dir())
         # Temporary storage directories creation
         self.create_temp_storage_dirs()
 
@@ -74,19 +74,19 @@ class Core(BaseComponent):
         """Create a temporary directory in /tmp with pid suffix."""
         tmp_dir = os.path.join('/tmp', 'owtf')
         if not os.path.exists(tmp_dir):
-            tmp_dir = os.path.join(tmp_dir, str(self.config.OwtfPid))
+            tmp_dir = os.path.join(tmp_dir, str(self.config.owtf_pid))
             if not os.path.exists(tmp_dir):
                 FileOperations.make_dirs(tmp_dir)
 
     def clean_temp_storage_dirs(self):
         """Rename older temporary directory to avoid any further confusions."""
-        curr_tmp_dir = os.path.join('/tmp', 'owtf', str(self.config.OwtfPid))
-        new_tmp_dir = os.path.join('/tmp', 'owtf', 'old-%d' % self.config.OwtfPid)
+        curr_tmp_dir = os.path.join('/tmp', 'owtf', str(self.config.owtf_pid))
+        new_tmp_dir = os.path.join('/tmp', 'owtf', 'old-%d' % self.config.owtf_pid)
         if os.path.exists(curr_tmp_dir) and os.access(curr_tmp_dir, os.W_OK):
             os.rename(curr_tmp_dir, new_tmp_dir)
 
     def pnh_log_file(self):
-        self.path = self.config.FrameworkConfigGet('PNH_EVENTS_FILE')
+        self.path = self.config.framework_config_get('PNH_EVENTS_FILE')
         self.mode = "w"
         try:
             if os.path.isfile(self.path):
@@ -101,7 +101,7 @@ class Core(BaseComponent):
     def write_event(self, content, mode):
         self.content = content
         self.mode = mode
-        self.file_path = self.config.FrameworkConfigGet('PNH_EVENTS_FILE')
+        self.file_path = self.config.framework_config_get('PNH_EVENTS_FILE')
 
         if (os.path.isfile(self.file_path) and os.access(self.file_path, os.W_OK)):
             try:
@@ -133,26 +133,26 @@ class Core(BaseComponent):
             try:
                 temp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 temp_socket.bind((
-                    self.db_config.Get('INBOUND_PROXY_IP'),
-                    int(self.db_config.Get('INBOUND_PROXY_PORT'))))
+                    self.db_config.get('INBOUND_PROXY_IP'),
+                    int(self.db_config.get('INBOUND_PROXY_PORT'))))
                 temp_socket.close()
             except socket.error:
-                self.error_handler.FrameworkAbort("Inbound proxy address %s:%s already in use" %
+                self.error_handler.framework_abort("Inbound proxy address %s:%s already in use" %
                                                   (self.db_config.Get('INBOUND_PROXY_IP'),
                                                    self.db_config.Get("INBOUND_PROXY_PORT")))
             # If everything is fine.
-            self.ProxyProcess = proxy.ProxyProcess()
-            self.ProxyProcess.initialize(options['OutboundProxy'], options['OutboundProxyAuth'])
-            self.TransactionLogger = transaction_logger.TransactionLogger(
-                cache_dir=self.db_config.Get('INBOUND_PROXY_CACHE_DIR'))
+            self.proxy_process = proxy.ProxyProcess()
+            self.proxy_process.initialize(options['OutboundProxy'], options['OutboundProxyAuth'])
+            self.transaction_logger = transaction_logger.TransactionLogger(
+                cache_dir=self.db_config.get('INBOUND_PROXY_CACHE_DIR'))
             logging.warn(
                 "%s:%s <-- HTTP(S) Proxy to which requests can be directed",
-                self.db_config.Get('INBOUND_PROXY_IP'),
-                self.db_config.Get("INBOUND_PROXY_PORT"))
-            self.ProxyProcess.start()
+                self.db_config.get('INBOUND_PROXY_IP'),
+                self.db_config.get("INBOUND_PROXY_PORT"))
+            self.proxy_process.start()
             logging.debug("Starting Transaction logger process")
-            self.TransactionLogger.start()
-            logging.debug("Proxy transaction's log file at %s", self.db_config.Get("PROXY_LOG"))
+            self.transaction_logger.start()
+            logging.debug("Proxy transaction's log file at %s", self.db_config.get("PROXY_LOG"))
         else:
             ComponentInitialiser.initialisation_phase_3(options['OutboundProxy'])
 
@@ -166,7 +166,7 @@ class Core(BaseComponent):
         process_name = kwargs.get("process_name", multiprocessing.current_process().name)
         logger = logging.getLogger()
         logger.setLevel(logging.DEBUG)
-        file_handler = self.file_handler(self.config.FrameworkConfigGetLogPath(process_name), mode="w+")
+        file_handler = self.file_handler(self.config.get_log_path(process_name), mode="w+")
         file_handler.setLevel(logging.DEBUG)
         file_handler.setFormatter(FileFormatter())
 
@@ -201,13 +201,13 @@ class Core(BaseComponent):
                 return self.run_cli()
 
     def initialise_framework(self, options):
-        self.ProxyMode = options["ProxyMode"]
+        self.proxy_mode = options["ProxyMode"]
         logging.info("Loading framework please wait..")
         ComponentInitialiser.initialisation_phase_3(options)
         self.initialise_plugin_handler_and_params(options)
         # No processing required, just list available modules.
         if options['list_plugins']:
-            self.PluginHandler.show_plugin_list(options['list_plugins'])
+            self.plugin_handler.show_plugin_list(options['list_plugins'])
             self.finish()
         self.config.process_options_phase2(options)
         command = self.get_command(options['argv'])
@@ -215,7 +215,7 @@ class Core(BaseComponent):
         self.start_botnet_mode(options)
         self.start_proxy(options)  # Proxy mode is started in that function.
         # Set anonymised invoking command for error dump info.
-        self.error_handler.SetCommand(OutputCleaner.anonymise_command(command))
+        self.error_handler.set_command(OutputCleaner.anonymise_command(command))
         return True
 
     def initialise_plugin_handler_and_params(self, options):
@@ -238,8 +238,8 @@ class Core(BaseComponent):
         logging.info("Press Ctrl+C when you spawned a shell ;)")
         self.disable_console_logging()
         self.interface_server.start()
-        self.FileServer = server.FileServer()
-        self.FileServer.start()
+        self.file_server = server.FileServer()
+        self.file_server.start()
 
     def run_cli(self):
         """This method starts the CLI server."""
@@ -254,22 +254,22 @@ class Core(BaseComponent):
 
         """
         if getattr(self, "TOR_process", None) is not None:
-            self.TOR_process.terminate()
+            self.tor_process.terminate()
         else:
             if getattr(self, "PluginHandler", None) is not None:
-                self.PluginHandler.clean_up()
+                self.plugin_handler.clean_up()
             if getattr(self, "ProxyProcess", None) is not None:
                 logging.info("Stopping inbound proxy processes and cleaning up. Please wait!")
-                self.ProxyProcess.clean_up()
+                self.proxy_process.clean_up()
                 self.kill_children(self.ProxyProcess.pid)
-                self.ProxyProcess.join()
+                self.proxy_process.join()
             if getattr(self, "TransactionLogger", None) is not None:
                 # No signal is generated during closing process by terminate()
-                self.TransactionLogger.poison_q.put('done')
-                self.TransactionLogger.join()
+                self.transaction_logger.poison_q.put('done')
+                self.transaction_logger.join()
             if getattr(self, "WorkerManager", None) is not None:
                 # Properly stop the workers.
-                self.WorkerManager.clean_up()
+                self.worker_manager.clean_up()
             if getattr(self, "db", None) is not None:
                 # Properly stop any DB instances.
                 self.db.clean_up()

@@ -10,21 +10,21 @@ import base64
 import errno
 
 
-def cprint(Message):
-    Pad = "[-] "
-    print Pad + str(Message).replace("\n", "\n" + Pad)
-    return Message
+def cprint(message):
+    pad = "[-] "
+    print pad + str(message).replace("\n", "\n" + pad)
+    return message
 
 
-def MultipleReplace(Text, ReplaceDict):
+def multiple_replace(text, replace_dict):
     """
     Perform multiple replacements in one go using the replace dictionary
     in format: { 'search' : 'replace' }
     """
-    NewText = Text
-    for Search, Replace in ReplaceDict.items():
-        NewText = NewText.replace(Search, str(Replace))
-    return NewText
+    new_text = text
+    for search, replace in replace_dict.items():
+        new_text = new_text.replace(search, str(replace))
+    return new_text
 
 
 def check_pid(pid):
@@ -48,57 +48,57 @@ def check_pid(pid):
         return True
 
 
-def WipeBadCharsForFilename(Filename):
-    return MultipleReplace(Filename, {'(': '', ' ': '_', ')': '', '/': '_'})
+def wipe_bad_char_filename(filename):
+    return multiple_replace(filename, {'(': '', ' ': '_', ')': '', '/': '_'})
 
 
-def RemoveListBlanks(src):
+def remove_list_blanks(src):
     return [el for el in src if el]
 
 
-def List2DictKeys(List):
-    Dictionary = defaultdict(list)
-    for Item in List:
-        Dictionary[Item] = ''
-    return Dictionary
+def list_to_dict_keys(list):
+    dictionary = defaultdict(list)
+    for item in list:
+        dictionary[item] = ''
+    return dictionary
 
 
-def AddToDict(FromDict, ToDict):
-    for Key, Value in FromDict.items():
-        if hasattr(Value, 'copy') and callable(getattr(Value, 'copy')):
-            ToDict[Key] = Value.copy()
+def add_to_dict(from_dict, to_dict):
+    for key, value in from_dict.items():
+        if hasattr(value, 'copy') and callable(getattr(value, 'copy')):
+            to_dict[key] = value.copy()
         else:
-            ToDict[Key] = Value
+            to_dict[key] = value
 
 
-def MergeDicts(Dict1, Dict2):
+def merge_dicts(dict1, dict2):
     """
     Returns a by-value copy contained the merged content of the 2 passed
     dictionaries
     """
-    NewDict = defaultdict(list)
-    AddToDict(Dict1, NewDict)
-    AddToDict(Dict2, NewDict)
-    return NewDict
+    new_dict = defaultdict(list)
+    add_to_dict(dict1, new_dict)
+    add_to_dict(dict2, new_dict)
+    return new_dict
 
 
-def TruncLines(Str, NumLines, EOL="\n"):
-    return EOL.join(Str.split(EOL)[0:NumLines])
+def trunk_line(str, num_lines, EOL="\n"):
+    return EOL.join(str.split(EOL)[0:num_lines])
 
 
-def DeriveHTTPMethod(Method, Data):  # Derives the HTTP method from Data, etc
-    DMethod = Method
+def derive_http_method(method, data):  # Derives the HTTP method from Data, etc
+    d_method = method
     # Method not provided: Determine method from params
-    if DMethod is None or DMethod == '':
-        DMethod = 'GET'
-        if Data != '' and Data is not None:
-            DMethod = 'POST'
-    return DMethod
+    if d_method is None or d_method == '':
+        d_method = 'GET'
+        if data != '' and data is not None:
+            d_method = 'POST'
+    return d_method
 
 
-def get_random_str(len):
+def get_random_str(length):
     """function returns random strings of length len"""
-    return base64.urlsafe_b64encode(os.urandom(len))[0:len]
+    return base64.urlsafe_b64encode(os.urandom(length))[0:length]
 
 
 def scrub_output(output):
@@ -106,20 +106,22 @@ def scrub_output(output):
     ansi_escape = re.compile(r'\x1b[^m]*m')
     return ansi_escape.sub('', output)
 
+
 def get_file_as_list(filename):
     try:
-        with open(filename, 'r') as File:
-            Output = File.read().split("\n")
+        with open(filename, 'r') as f:
+            output = f.read().split("\n")
             cprint("Loaded file: %s" % filename)
     except IOError, error:
         log("Cannot open file: %s (%s)" % (filename, str(sys.exc_info())))
-        Output = []
-    return Output
+        output = []
+    return output
+
 
 def paths_exist(PathList):
-    ValidPaths = True
-    for Path in PathList:
-        if Path and not os.path.exists(Path):
-            log("WARNING: The path %s does not exist!" % Path)
-            ValidPaths = False
-    return ValidPaths
+    valid_paths = True
+    for path in path_list:
+        if path and not os.path.exists(path):
+            log("WARNING: The path %s does not exist!" % path)
+            valid_paths = False
+    return valid_paths

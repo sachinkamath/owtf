@@ -18,28 +18,28 @@ from framework.utils import OutputCleaner, print_version
 
 
 class ErrorHandler(BaseComponent, ErrorHandlerInterface):
-    Command = ''
-    PaddingLength = 100
+    command = ''
+    padding_length = 100
     COMPONENT_NAME = "error_handler"
 
     def __init__(self):
         self.register_in_service_locator()
         self.config = self.get_component("config")
-        self.Core = None
+        self.core = None
         self.db = None
         self.db_error = None
-        self.Padding = "\n%s\n\n" % ("_" * self.PaddingLength)
-        self.SubPadding = "\n%s\n" % ("*" * self.PaddingLength)
+        self.padding = "\n%s\n\n" % ("_" * self.padding_length)
+        self.sub_padding = "\n%s\n" % ("*" * self.padding_length)
 
     def init(self):
-        self.Core = self.get_component("core")
+        self.core = self.get_component("core")
         self.db = self.get_component("db")
         self.db_error = self.get_component("db_error")
 
-    def SetCommand(self, command):
-        self.Command = command
+    def set_command(self, command):
+        self.command = command
 
-    def FrameworkAbort(self, message):
+    def framework_abort(self, message):
         """Abort the OWTF framework.
 
         :warning: If it happens really early and :class:`framework.core.Core`
@@ -59,13 +59,13 @@ class ErrorHandler(BaseComponent, ErrorHandlerInterface):
             # Therefore, force a brutal exit and throw away the message.
             sys.exit(-1)
         else:
-            self.Core.finish()
+            self.core.finish()
         return message
 
     def get_option_from_user(self, options):
         return raw_input("Options: 'e'+Enter= Exit" + options + ", Enter= Next test\n")
 
-    def UserAbort(self, level, partial_output=''):
+    def user_abort(self, level, partial_output=''):
         # Levels so far can be Command or Plugin
         message = logging.info(
             "\nThe %s was aborted by the user: Please check the report and plugin output files" % level)
@@ -84,36 +84,36 @@ class ErrorHandler(BaseComponent, ErrorHandlerInterface):
                 raise PluginAbortException(partial_output)
         return message
 
-    def LogError(self, message, trace=None):
+    def log_error(self, message, trace=None):
         try:
             self.db_error.Add(message, trace)  # Log error in the DB.
         except AttributeError:
             cprint("ERROR: DB is not setup yet: cannot log errors to file!")
 
-    def AddOWTFBug(self, message):
+    def add_owtf_bug(self, message):
         exc_type, exc_value, exc_traceback = sys.exc_info()
         err_trace_list = traceback.format_exception(exc_type, exc_value, exc_traceback)
         err_trace = OutputCleaner.anonymise_command("\n".join(err_trace_list))
         message = OutputCleaner.anonymise_command(message)
         output = "%sOWTF BUG: Please report the sanitised information below to help make this better.Thank you.%s" % \
-            (self.Padding + self.SubPadding + print_version(self.config.Rootdir, commit_hash=True, version=True) +
-             self.SubPadding)
+            (self.padding + self.sub_padding + print_version(self.config.root_dir, commit_hash=True, version=True) +
+             self.sub_padding)
         output += "\nMessage: %s\n" % message
         output += "\nError Trace:"
         output += "\n%s" % err_trace
-        output += "\n%s" % self.Padding
+        output += "\n%s" % self.padding
         cprint(output)
-        self.LogError(message, err_trace)
+        self.log_error(message, err_trace)
 
-    def Add(self, message, bugType='owtf'):
-        if bugType == 'owtf':
-            return self.AddOWTFBug(message)
+    def add(self, message, bug_type='owtf'):
+        if bug_type == 'owtf':
+            return self.add_owtf_bug(message)
         else:
-            output = self.Padding + message + self.SubPadding
+            output = self.padding + message + self.sub_padding
             cprint(output)
-            self.LogError(message)
+            self.log_error(message)
 
-    def AddGithubIssue(self, title='Bug report from OWTF', info=None, user=None):
+    def add_github_issue(self, title='Bug report from OWTF', info=None, user=None):
         # TODO: Has to be ported to use db and infact add to interface.
         # Once db is implemented, better verbosity will be easy.
         error_data = self.db.ErrorData()
@@ -132,12 +132,9 @@ class ErrorHandler(BaseComponent, ErrorHandlerInterface):
         data = json.dumps(data)  # Converted to string.
         headers = {
             "Content-Type": "application/json",
-            "Authorization":
-                "token " + self.config.Get("GITHUB_BUG_REPORTER_TOKEN")
+            "Authorization": "token " + self.config.get("GITHUB_BUG_REPORTER_TOKEN")
         }
-        request = urllib2.Request(self.config.Get("GITHUB_API_ISSUES_URL"),
-                                  headers=headers,
-                                  data=data)
+        request = urllib2.Request(self.config.get("GITHUB_API_ISSUES_URL"), headers=headers, data=data)
         response = urllib2.urlopen(request)
         decoded_resp = json.loads(response.read())
         if response.code == 201:

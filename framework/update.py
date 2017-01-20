@@ -53,9 +53,7 @@ class Updater(object):
 
     def check(self):
         """Check whether the repository is a git repo.
-
         Needed because update process is using git.
-
         """
         if not os.path.exists(os.path.join(self.root_dir, '.git')):
             cprint("Not a git repository. Please checkout OWTF repo from GitHub "
@@ -67,13 +65,8 @@ class Updater(object):
 
     def last_commit_hash(self):
         """Returns the last commit hash in the local repo."""
-        command = ("git --git-dir=%s log -n 1 " % (self.git_dir))
-        command += "--pretty=format:%H"
-        process = execute(command,
-                          shell=True,
-                          env=self.process_environ,
-                          stdout=PIPE,
-                          stderr=PIPE)
+        command = ("git --git-dir=%s log -n 1 --pretty=format:%H" % (self.git_dir))
+        process = execute(command, shell=True, env=self.process_environ, stdout=PIPE, stderr=PIPE)
         stdout, stderr = process.communicate()
         commit_hash = stdout.strip()
         return commit_hash
@@ -85,11 +78,7 @@ class Updater(object):
             if self.last_commit_hash() != self.remote_tags[0]["commit"]["sha"]:
                 cprint("Trying to update OWTF to %s" % self.remote_tags[0]["name"])
                 command = ("git pull; git reset --soft %s" % self.remote_tags[0]["name"])
-                process = execute(command,
-                                  shell=True,
-                                  env=self.process_environ,
-                                  stdout=PIPE,
-                                  stderr=PIPE)
+                process = execute(command, shell=True, env=self.process_environ, stdout=PIPE, stderr=PIPE)
                 stdout, stderr = process.communicate()
                 success = not process.returncode
                 if success:

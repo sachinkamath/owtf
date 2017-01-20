@@ -18,18 +18,18 @@ class Zest(BaseComponent, ZestInterface):
         self.db_config = self.get_component("db_config")
         self.target = self.get_component("target")
         self.db = self.get_component("db")
-        self.recordedTransactions = []  # keeps track of recorded transactions
+        self.record_transactions = []  # keeps track of recorded transactions
 
     def init(self):
-        self.StopRecorder()  # recorded should be stopped when OWTF starts
+        self.stop_recorder()  # recorded should be stopped when OWTF starts
 
     # Script creation from single transaction
-    def TargetScriptFromSingleTransaction(self, transaction_id, script_name, target_id):
-        target_config = self.GetTargetConfig(target_id)
-        return self.GenerateZest(script_name, transaction_id, target_config, "False")
+    def get_script_single_transaction(self, transaction_id, script_name, target_id):
+        target_config = self.get_target_config(target_id)
+        return self.generate_zest(script_name, transaction_id, target_config, "False")
 
     # script creation from multiple requests
-    def TargetScriptFromMultipleTransactions(self, target_id, script_name, transactions):
+    def get_script_multiple_transaction(self, target_id, script_name, transactions):
         target_config = self.GetTargetConfig(target_id)
         zest_args = self.ConvertToZestArgs(transactions)
         return self.GenerateZest(script_name, zest_args, target_config, "False")

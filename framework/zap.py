@@ -15,6 +15,6 @@ class ZAP_API(BaseComponent, ZapAPIInterface):
                                               self.config.FrameworkConfigGet("ZAP_PROXY_PORT"))
         self.zap = ZAPv2(proxies={'http': zap_proxy_address, 'https': zap_proxy_address})
 
-    def ForwardRequest(self, target_id, transaction_id):
+    def forward_request(self, target_id, transaction_id):
         request = self.transaction.GetByIDAsDict(int(transaction_id), target_id=int(target_id))['raw_request']
         self.zap.core.send_request(request)

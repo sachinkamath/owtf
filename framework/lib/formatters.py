@@ -13,9 +13,7 @@ TERMINAL_COLOR_END = '\033[0m'
 
 
 class ConsoleFormatter(logging.Formatter):
-    """
-    Custom formatter to show logging messages differently on Console
-    """
+    """Custom formatter to show logging messages differently on console"""
 
     error_fmt = TERMINAL_COLOR_RED + "[!] %(message)s" + TERMINAL_COLOR_END
     warn_fmt = TERMINAL_COLOR_YELLOW + "[*] %(message)s" + TERMINAL_COLOR_END
@@ -23,7 +21,6 @@ class ConsoleFormatter(logging.Formatter):
     info_fmt = TERMINAL_COLOR_BLUE + "[-] %(message)s" + TERMINAL_COLOR_END
 
     def format(self, record):
-
         # Save the original format configured by the user
         # when the logger formatter was instantiated
         format_orig = self._fmt
@@ -40,7 +37,6 @@ class ConsoleFormatter(logging.Formatter):
 
         # Call the original formatter class to do the grunt work
         result = super(ConsoleFormatter, self).format(record)
-
         # Restore the original format configured by the user
         self._fmt = format_orig
 
@@ -48,9 +44,8 @@ class ConsoleFormatter(logging.Formatter):
 
 
 class FileFormatter(logging.Formatter):
-    """
-    Custom formatter for log files
-    """
+    """Custom formatter for log files"""
+
     def __init__(self, *args, **kwargs):
         super(FileFormatter, self).__init__()
         self._fmt = "[%(levelname)s] [%(asctime)s] " + "[File '%(filename)s', line %(lineno)s, in %(funcName)s] -" + \
