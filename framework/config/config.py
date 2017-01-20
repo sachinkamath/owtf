@@ -414,9 +414,9 @@ class Config(BaseComponent, ConfigInterface):
                 return True
         return False
 
-    def GetKeyValue(self, key):
+    def get_key_val(self, key):
         # Gets the right config for target / general.
-        config = self.GetConfig()
+        config = self.get_config()
         for type in CONFIG_TYPES:
             if key in config[type]:
                 return config[type][key]
