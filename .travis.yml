@@ -5,6 +5,7 @@ python:
 branches:
     only:
         - develop
+        - test-travis
 dist:
     - trusty
 sudo:
