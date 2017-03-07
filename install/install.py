@@ -14,7 +14,7 @@ from space_checker_utils import wget_wrapper
 
 
 def create_directory(directory):
-    """Create parent directories as necessary.
+    """ Create parent directories as necessary.
     :param directory: (~str) Path of directory to be made.
     :return: True - if directory is created, and False - if not.
     """
