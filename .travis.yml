@@ -3,8 +3,7 @@ python:
   - '3.6'
 branches:
   only:
-  - master
-  - develop
+  - fix-travis
 services:
   - postgresql
 dist:
@@ -13,8 +12,9 @@ sudo:
   - required
 before_install:
   - sudo apt-get purge python-openssl
-  - sudo apt-get install libffi-dev libyaml-dev python-yaml
-  - sudo pip install pyopenssl 
+  - sudo apt-get install libffi-dev libyaml-dev python-yaml libgnutls28-dev
+  - sudo pip install pyopenssl
+  - sudo pip install --upgrade pip 
   - psql postgres -c "CREATE USER owtf_db_user WITH PASSWORD 'jgZKW33Q+HZk8rqylZxaPg1lbuNGHJhgzsq3gBKV32g=';"
   - psql postgres -c "CREATE DATABASE owtf_db WITH OWNER owtf_db_user ENCODING 'utf-8' TEMPLATE template0;"
 install:
@@ -39,5 +39,3 @@ script:
   - python -m unittest tests.functional.plugins.web
 notifications:
   email: false
-  slack:
-    secure: okaGyJfCrXFExrF9j71HPQQQXyU5ZMKvteRjBC1Tnx7EpjtAtTm4f0f08PY/EtqSpkQpWDqcXea/0OkQIsks5slaa+vZHxEoW13bzqHQRBikE0nsgQVmV3g1U06gBilE9cqY+8D3fJcAEIZDHIeguf1B0vNzFL14s3nFgn4QVjg=
